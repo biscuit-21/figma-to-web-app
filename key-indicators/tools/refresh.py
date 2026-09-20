@@ -2,7 +2,11 @@
 """Replace the bundled snapshot with live observations from the FRED API.
 
     export FRED_API_KEY=your_key_here
-    python3 tools/refresh.py && python3 tools/build.py
+    python3 tools/refresh.py [--force] && python3 tools/build.py
+
+Skips the pull if the data was already refreshed today, unless --force is
+given. FRED series update on agency release schedules, so more than one pull a
+day is wasted effort.
 
 A key is free from https://fredaccount.stlouisfed.org/apikeys.
 
@@ -100,13 +104,21 @@ def align(obs: list[tuple[str, float]], start_y: int, start_m: int, step: int,
 
 
 def main() -> int:
+    force = "--force" in sys.argv
+
+    data_preview = json.loads(DATA.read_text(encoding="utf-8"))
+    today = time.strftime("%Y-%m-%d")
+    if data_preview.get("asOf") == today and not force:
+        print(f"Data was already refreshed today ({today}). Use --force to pull again.")
+        return 0
+
     key = os.environ.get("FRED_API_KEY", "").strip()
     if not key:
         print("Set FRED_API_KEY first. Get a free key at "
               "https://fredaccount.stlouisfed.org/apikeys", file=sys.stderr)
         return 1
 
-    data = json.loads(DATA.read_text(encoding="utf-8"))
+    data = data_preview
     start_y, start_m = int(data["start"][:4]), int(data["start"][5:7])
 
     failures = []

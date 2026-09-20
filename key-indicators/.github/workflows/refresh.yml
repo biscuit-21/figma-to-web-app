@@ -1,0 +1,58 @@
+name: Refresh data
+
+on:
+  schedule:
+    # 14:00 UTC on weekdays — after the 08:30 ET window most U.S. agencies
+    # use for releases. GitHub may delay scheduled runs at busy times.
+    - cron: '0 14 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull the latest observations from FRED
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: |
+          if [ -z "$FRED_API_KEY" ]; then
+            echo "::error::FRED_API_KEY is not set. Add it under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          python3 tools/refresh.py --force
+
+      - name: Rebuild the dashboard
+        run: python3 tools/build.py
+
+      - name: Commit if anything changed
+        id: commit
+        run: |
+          if git diff --quiet; then
+            echo "No new observations since the last refresh."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/data.json web/index.html
+          git commit -m "Refresh economic data ($(date -u +%Y-%m-%d))"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+  # A commit made with GITHUB_TOKEN does not trigger other workflows, so the
+  # Pages deploy has to be called from here rather than left to pages.yml.
+  deploy:
+    needs: refresh
+    if: needs.refresh.outputs.changed == 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
