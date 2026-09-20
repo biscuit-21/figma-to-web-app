@@ -1,8 +1,4 @@
-dist/
-key-indicators
-key-indicators.exe
-*.tar.gz
-*.zip
 .DS_Store
 __pycache__/
+*.pyc
 .venv/

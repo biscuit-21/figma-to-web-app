@@ -4,45 +4,20 @@ A dashboard for U.S. economic data — inflation, employment, interest rates,
 growth, exchange rates, housing and consumer spending — in twenty-two series
 across eight categories.
 
-It runs as a single executable with nothing to install: the dashboard is
-compiled into the binary, which serves it on localhost and opens your browser.
-It is also a plain HTML file, so you can open it directly or host it anywhere
-static.
-
+It is a single self-contained HTML file. No build step, no server, no
+dependencies: open it and it works.
 
 ## Run it
 
-**Download a binary.** Grab the one for your platform from
-[Releases](../../releases), then:
-
-```sh
-chmod +x key-indicators-darwin-arm64     # macOS and Linux only
-./key-indicators-darwin-arm64
-```
-
-On Windows, double-click the `.exe`. macOS will refuse an unsigned download the
-first time — right-click the file and pick Open, or run
-`xattr -d com.apple.quarantine key-indicators-darwin-arm64`.
-
-**Or skip the binary entirely.** `web/index.html` is self-contained. Open it in
-a browser and everything works.
-
-**Or build from source.** Requires Go 1.22 or newer:
+Either use the hosted copy, or clone and open the file:
 
 ```sh
 git clone https://github.com/your-username/key-indicators.git
-cd key-indicators
-make run
 ```
 
-### Options
-
-```
--port 7331      port to listen on; 0 picks any free port
--host 127.0.0.1 bind address; use 0.0.0.0 to reach it from other machines
--open=false     don't launch a browser
--version        print the version
-```
+Then open `web/index.html` in any browser — double-click it, or drag it onto a
+browser window. Everything runs locally; the page makes no network calls of its
+own beyond loading its typeface.
 
 ## What it does
 
@@ -77,11 +52,13 @@ python3 tools/refresh.py     # pulls every series from the FRED API
 python3 tools/build.py       # rebuilds web/index.html
 ```
 
-`refresh.py` asks FRED to apply its own transforms — year-over-year percentages,
-period changes, monthly aggregation of daily yields — so the refreshed numbers
-are the published ones rather than anything computed here. It touches only the
-values; the titles and commentary in `data.json` are left alone. If any series
-fails, nothing is written.
+Python 3.9 or newer, standard library only.
+
+`refresh.py` asks FRED to apply its own transforms — year-over-year
+percentages, period changes, monthly aggregation of daily yields — so the
+refreshed numbers are the published ones rather than anything computed here. It
+touches only the values; the titles and commentary in `data.json` are left
+alone. If any series fails, nothing is written.
 
 Source agencies: Bureau of Labor Statistics, Bureau of Economic Analysis,
 Census Bureau, Federal Reserve Board, Freddie Mac, S&P Dow Jones Indices,
@@ -90,35 +67,23 @@ University of Michigan. Series identifiers follow FRED.
 ## Layout
 
 ```
-main.go              embeds web/ and serves it
-web/index.html       the dashboard — self-contained, no runtime fetches
-tools/template.html  the same file with a /*__DATA__*/ placeholder
-tools/data.json      the dataset
-tools/build.py       template + data -> web/index.html
-tools/refresh.py     pull live observations from the FRED API
+web/index.html           the dashboard — generated, do not edit by hand
+tools/template.html      the source of the dashboard, with a /*__DATA__*/ slot
+tools/data.json          the dataset
+tools/build.py           template + data -> web/index.html
+tools/refresh.py         pull live observations from the FRED API
 tools/build_snapshot.py  regenerate the bundled snapshot from anchor points
 ```
 
-`web/index.html` is generated. Edit `tools/template.html` and run
-`python3 tools/build.py`; CI fails if the two drift apart.
-
-## Make targets
-
-```
-make build   compile for this machine
-make run     build and start
-make data    rebuild web/index.html from tools/
-make check   go vet and a compile check
-make dist    cross-compile all platforms into dist/ with checksums
-```
+To change the dashboard itself, edit `tools/template.html` and run
+`python3 tools/build.py`. Edits made directly to `web/index.html` are
+overwritten by the next build, and CI fails if the two drift apart.
 
 ## Automation
 
-- `ci.yml` — vets and compiles on every push, and fails if `web/index.html`
-  is out of date with `tools/`.
+- `ci.yml` — rebuilds `web/index.html` on every push and fails if it differs
+  from what `tools/` produces.
 - `pages.yml` — publishes `web/` to GitHub Pages on push to `main`.
-- `release.yml` — on a `v*` tag, cross-compiles Linux, macOS and Windows
-  binaries, generates `SHA256SUMS`, and attaches everything to the release.
 
 ## Licence
 
