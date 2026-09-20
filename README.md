@@ -19,9 +19,6 @@ Then open `web/index.html` in any browser — double-click it, or drag it onto a
 browser window. Everything runs locally; the page makes no network calls of its
 own beyond loading its typeface.
 
-The data is kept current by a scheduled workflow, so both the hosted copy and a
-fresh `git pull` give you the latest published figures without any setup.
-
 ## What it does
 
 - **Charts you can interrogate.** Hover or drag for the value at any point.
@@ -41,33 +38,18 @@ mislead. Colour shows direction only.
 
 ## Data
 
-The data refreshes itself. A scheduled workflow pulls every series from the
-FRED API on weekday mornings, rebuilds the dashboard, and commits the result
-only if the numbers actually moved. Visitors need no key, no account and no
-setup — whatever they open is already current.
+The repository ships a **bundled snapshot**. The latest reading of every series
+matches the agency release it claims; earlier history is reconstructed from
+published figures and interpolated between them, so the shapes are right but
+individual mid-series months are approximations rather than exact prints.
 
-The repository ships a starting snapshot: the latest reading of every series
-matches the agency release it claims, while earlier history is reconstructed
-from published figures and interpolated between them. The first successful
-refresh replaces all of it with published observations.
-
-### Turning the refresh on
-
-Get a free API key from the
-[St. Louis Fed](https://fredaccount.stlouisfed.org/apikeys), then add it under
-**Settings -> Secrets and variables -> Actions -> New repository secret**, named
-`FRED_API_KEY`. Run **Actions -> Refresh data -> Run workflow** once to confirm
-it works; after that it runs on its own.
-
-Without the secret the scheduled run fails and the site keeps serving the data
-it already has.
-
-To refresh by hand:
+To replace it with live data, get a free API key from the
+[St. Louis Fed](https://fredaccount.stlouisfed.org/apikeys) and run:
 
 ```sh
 export FRED_API_KEY=your_key_here
-python3 tools/refresh.py     # add --force to pull again the same day
-python3 tools/build.py
+python3 tools/refresh.py     # pulls every series from the FRED API
+python3 tools/build.py       # rebuilds web/index.html
 ```
 
 Python 3.9 or newer, standard library only.
@@ -99,13 +81,9 @@ overwritten by the next build, and CI fails if the two drift apart.
 
 ## Automation
 
-- `refresh.yml` — pulls fresh observations from FRED on weekday mornings,
-  rebuilds the dashboard, commits only when the data has moved, and redeploys
-  the site. Also runnable on demand from the Actions tab.
-- `pages.yml` — publishes `web/` to GitHub Pages on push to `main`, and when
-  `refresh.yml` calls it.
 - `ci.yml` — rebuilds `web/index.html` on every push and fails if it differs
   from what `tools/` produces.
+- `pages.yml` — publishes `web/` to GitHub Pages on push to `main`.
 
 ## Licence
 
