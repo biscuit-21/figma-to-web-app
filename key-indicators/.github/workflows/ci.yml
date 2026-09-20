@@ -1,0 +1,33 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Rebuild the dashboard from template and data
+        run: python3 tools/build.py
+
+      - name: Fail if web/index.html is out of date
+        run: |
+          if ! git diff --quiet -- web/index.html; then
+            echo "web/index.html does not match tools/. Run: python3 tools/build.py"
+            git diff --stat -- web/index.html
+            exit 1
+          fi
+
+      - run: go vet ./...
+      - run: go build -o /dev/null .
