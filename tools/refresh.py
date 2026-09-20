@@ -33,8 +33,8 @@ import urllib.request
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA = ROOT / "tools" / "data.json"
 API = "https://api.stlouisfed.org/fred/series/observations"
-TIMEOUT = 30
-RETRIES = 3
+TIMEOUT = 12      # FRED answers in well under a second when healthy
+RETRIES = 2
 
 
 def month_index(date: str, start_y: int, start_m: int) -> int:
@@ -69,7 +69,7 @@ def fetch(series_id: str, pull: dict, key: str, start: str) -> list[tuple[str, f
             last_err = e
         except Exception as e:  # network hiccup, rate limit
             last_err = e
-        time.sleep(1.5 * (attempt + 1))
+        time.sleep(1.0 * (attempt + 1))
     else:
         raise SystemExit(f"could not fetch {series_id}: {last_err}")
 

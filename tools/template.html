@@ -106,11 +106,20 @@ nav{padding:12px 12px 8px;flex:1}
 .nav-item[aria-current="true"] .cnt{color:var(--on-blue);opacity:.7}
 
 .pins{border-top:1px solid var(--rule-soft);padding:12px}
+.pin-item{display:flex;align-items:center;border-radius:6px}
+.pin-item:hover{background:var(--rule-soft)}
 .pin-row{
-  display:flex;align-items:baseline;gap:8px;width:100%;
-  padding:6px 10px;border-radius:6px;font-size:13px;text-align:left;
+  display:flex;align-items:baseline;gap:8px;flex:1;min-width:0;
+  padding:6px 4px 6px 10px;font-size:13px;text-align:left;
 }
-.pin-row:hover{background:var(--rule-soft)}
+.pin-x{
+  flex:0 0 auto;width:24px;height:24px;margin-right:4px;border-radius:5px;
+  display:grid;place-items:center;color:var(--muted);
+  opacity:0;transition:opacity .12s;
+}
+.pin-item:hover .pin-x,.pin-x:focus-visible{opacity:1}
+.pin-x:hover{color:var(--ink);background:var(--rule)}
+@media (hover:none){.pin-x{opacity:.65}}
 .pin-row .pv{margin-left:auto;font-weight:600;font-variant-numeric:tabular-nums}
 .rail-foot{
   padding:16px 22px 22px;border-top:1px solid var(--rule-soft);
@@ -163,6 +172,15 @@ main{flex:1;min-width:0;padding:34px 40px 80px;max-width:1440px}
 .legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:baseline}
 
 /* -------------------------------------------------------------- readout */
+.sect[hidden]{display:none}
+.sect{
+  font-family:var(--serif);font-size:19px;font-weight:600;
+  letter-spacing:-.01em;margin:26px 0 11px;
+}
+.sect:not([hidden]) + .readout{margin-top:0}
+.sect:not([hidden]) + .grid{margin-top:0}
+
+.readout[hidden]{display:none}
 .readout{
   display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));
   gap:0;margin:26px 0 6px;background:var(--card);
@@ -221,6 +239,7 @@ main{flex:1;min-width:0;padding:34px 40px 80px;max-width:1440px}
 
 .plot{position:relative;margin:8px -6px 0;touch-action:pan-y}
 .plot svg{display:block;width:100%;height:auto}
+.plot svg:not([width]){min-height:120px}
 .tip{
   position:absolute;pointer-events:none;z-index:5;
   background:var(--card);border:1px solid var(--rule);border-radius:7px;
@@ -247,6 +266,7 @@ main{flex:1;min-width:0;padding:34px 40px 80px;max-width:1440px}
 .empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:6px;font-weight:600}
 
 /* ------------------------------------------------------------- compare */
+.cbar[hidden]{display:none}
 .cbar{
   position:fixed;left:calc(var(--rail) + 40px);right:40px;bottom:22px;z-index:40;
   background:var(--card);border:1px solid var(--rule);border-radius:11px;
@@ -409,7 +429,9 @@ main{flex:1;min-width:0;padding:34px 40px 80px;max-width:1440px}
       </div>
     </div>
 
+    <h3 class="sect" id="h-overview" hidden>Overview</h3>
     <div id="readout"></div>
+    <h3 class="sect" id="h-depth" hidden>In-Depth</h3>
     <div class="grid" id="grid"></div>
     <div class="empty" id="empty" hidden>
       <b>No indicator matches that</b>
@@ -605,7 +627,7 @@ function chart(s, months, opt){
     });
   }
 
-  const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${s.name} over time" style="width:100%;height:auto;display:block">${g}</svg>`;
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${s.name} over time" style="width:100%;height:auto;display:block">${g}</svg>`;
   return {svg, X, Y, p, P, W, H};
 }
 
@@ -682,6 +704,7 @@ const ICON = {
   home:'<path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/>',
   cart:'<circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.6 12h11l2.4-8H6"/>',
   pin:'<path d="M12 17v5"/><path d="M9 3h6l-1 6 3 3H7l3-3-1-6z"/>',
+  unpin:'<g transform="rotate(45 12 12)"><path d="M12 17v5"/><path d="M9 3h6l-1 6 3 3H7l3-3-1-6z"/></g>',
   plus:'<path d="M12 5v14M5 12h14"/>',
   expand:'<path d="M9 3H3v6M15 21h6v-6M3 3l7 7M21 21l-7-7"/>',
   x:'<path d="M18 6L6 18M6 6l12 12"/>'
@@ -735,11 +758,16 @@ function renderPins(){
   box.hidden = valid.length === 0;
   list.innerHTML = valid.map(id => {
     const s = byId[id], v = s.values[s.values.length-1];
-    return `<button class="pin-row" data-open="${id}">
-      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.name}</span>
-      <span class="pv">${fmt(v,s)}${s.suffix||""}</span></button>`;
+    return `<div class="pin-item">
+      <button class="pin-row" data-open="${id}">
+        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.name}</span>
+        <span class="pv">${fmt(v,s)}${s.suffix||""}</span>
+      </button>
+      <button class="pin-x" data-unpin="${id}" aria-label="Unpin ${s.name}" title="Unpin">${svgI("unpin",14)}</button>
+    </div>`;
   }).join("");
   list.querySelectorAll("[data-open]").forEach(b => b.onclick = () => openSheet(b.dataset.open));
+  list.querySelectorAll("[data-unpin]").forEach(b => b.onclick = () => togglePin(b.dataset.unpin));
 }
 
 function renderReadout(){
@@ -777,7 +805,7 @@ function card(s){
         <span class="unit">${s.unit}</span>
       </div>
       <div class="c-acts">
-        <button class="act" data-pin="${s.id}" aria-pressed="${pinned}" aria-label="${pinned?"Unpin":"Pin"} ${s.name}" title="${pinned?"Unpin":"Pin to sidebar"}">${svgI("pin",16)}</button>
+        <button class="act" data-pin="${s.id}" aria-pressed="${pinned}" aria-label="${pinned?"Unpin":"Pin"} ${s.name}" title="${pinned?"Unpin":"Pin to sidebar"}">${svgI(pinned?"unpin":"pin",16)}</button>
         <button class="act" data-cmp="${s.id}" aria-pressed="${inCmp}" aria-label="${inCmp?"Remove from comparison":"Add to comparison"}" title="${inCmp?"Remove from comparison":"Add to comparison"}">${svgI("plus",16)}</button>
         <button class="act" data-open="${s.id}" aria-label="Open ${s.name} in detail" title="Details">${svgI("expand",15)}</button>
       </div>
@@ -816,6 +844,9 @@ function render(){
     ? `Indicators matching “${S.q}”.` : cat.note;
 
   grid.style.gridTemplateColumns = "";
+  const showSections = S.cat === "key" && !S.q;
+  document.getElementById("h-overview").hidden = !showSections;
+  document.getElementById("h-depth").hidden = !showSections;
   renderReadout();
   const list = seriesFor();
   empty.hidden = list.length > 0;
@@ -853,6 +884,11 @@ function toggleCmp(id){
 function renderCmpBar(){
   const bar = document.getElementById("cbar");
   bar.hidden = S.cmp.length === 0 || S.cmpOpen;
+  const go = document.getElementById("cgo");
+  go.disabled = S.cmp.length < 2;
+  go.style.opacity = go.disabled ? ".45" : "";
+  go.style.cursor = go.disabled ? "not-allowed" : "";
+  go.textContent = S.cmp.length < 2 ? "Pick one more to compare" : "Chart together";
   document.getElementById("ctags").innerHTML = S.cmp.map(id =>
     `<span class="tag">${byId[id].name}<button data-drop="${id}" aria-label="Remove ${byId[id].name}">${svgI("x",12)}</button></span>`).join("");
   bar.querySelectorAll("[data-drop]").forEach(b => b.onclick = () => toggleCmp(b.dataset.drop));
@@ -862,7 +898,11 @@ function renderCmpBar(){
 const CMP_COLORS = ["var(--blue-line)","var(--rise)","var(--fall)","#7A4FBF"];
 
 function renderCompare(){
-  document.getElementById("readout").innerHTML = "";
+  document.getElementById("h-overview").hidden = true;
+  document.getElementById("h-depth").hidden = true;
+  const ro = document.getElementById("readout");
+  ro.innerHTML = ""; ro.className = "";
+  if(!S.cmp.length){ S.cmpOpen = false; render(); return; }
   document.getElementById("empty").hidden = true;
   document.getElementById("cat-name").textContent = "Comparison";
   const sameUnit = new Set(S.cmp.map(id => byId[id].unit)).size === 1;
@@ -918,7 +958,7 @@ function renderCompare(){
           <span class="num" style="font-size:13.5px;color:var(--muted)">${fmt(x.p[x.p.length-1].raw, x.s)}${x.s.suffix||""}</span>
         </div>`).join("")}
       </div>
-      <div class="plot" id="cmpplot"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Comparison chart" style="width:100%;height:auto;display:block">${g}</svg></div>
+      <div class="plot" id="cmpplot"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Comparison chart" style="width:100%;height:auto;display:block">${g}</svg></div>
       <div class="c-foot"><span>${sameUnit ? "Shared axis" : "Rebased: each line starts at 100"}</span>
       <button class="btn ghost" style="margin-left:auto;padding:5px 12px" id="cmpback">Back to indicators</button></div>
     </article>`;
@@ -968,6 +1008,7 @@ function openSheet(id){
       </div>
       <div style="display:flex;gap:9px;margin-top:20px;flex-wrap:wrap">
         <button class="btn ghost" id="shpin">${S.pins.includes(s.id)?"Unpin":"Pin to sidebar"}</button>
+        <button class="btn ghost" id="shcmp">${S.cmp.includes(s.id)?"Remove from comparison":"Add to comparison"}</button>
         <button class="btn ghost" id="shcsv">Copy data as CSV</button>
         <a class="btn ghost" style="text-decoration:none" href="https://fred.stlouisfed.org/series/${s.fred}" target="_blank" rel="noopener">Open on FRED</a>
       </div>
@@ -990,6 +1031,11 @@ function openSheet(id){
 
   sheet.querySelector("#shx").onclick = closeSheet;
   sheet.querySelector("#shpin").onclick = () => { togglePin(s.id); openSheet(id); };
+  sheet.querySelector("#shcmp").onclick = () => {
+    const before = S.cmp.length;
+    toggleCmp(s.id);
+    if(S.cmp.length !== before) openSheet(id);   // unchanged means the limit was hit
+  };
   sheet.querySelector("#shcsv").onclick = () => {
     const rows = ["date,value"].concat(s.values.map((val,j) => `${dateOf(s, j*s.step)},${val}`));
     const text = rows.join("\n");
@@ -1047,7 +1093,10 @@ function init(){
   document.getElementById("menu").onclick = () =>
     document.getElementById("rail").classList.toggle("on");
   document.getElementById("scrim").onclick = closeSheet;
-  document.getElementById("cgo").onclick = () => { S.cmpOpen = true; render(); window.scrollTo({top:0}); };
+  document.getElementById("cgo").onclick = () => {
+    if(S.cmp.length < 2) return;
+    S.cmpOpen = true; render(); window.scrollTo({top:0});
+  };
   document.getElementById("cclear").onclick = () => { S.cmp = []; S.cmpOpen = false; render(); };
 
   addEventListener("keydown", e => {
